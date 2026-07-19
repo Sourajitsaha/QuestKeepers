@@ -9,8 +9,14 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.image import Image
 from kivy.clock import Clock
+import subprocess
+import sys
 
-Window.clearcolor = (0.45, 0.78, 0.95, 1)
+from pywin.framework.editor import color
+
+#import threading
+
+Window.clearcolor = (0.43, 0.67, 0.89, 1)
 
 
 # ---------- HOME SCREEN ----------
@@ -19,8 +25,6 @@ class HomeScreen(Screen):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
-        layout = FloatLayout()
 
         layout = FloatLayout()
 
@@ -95,14 +99,21 @@ class GoalScreen(Screen):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
-        self.xp = 0
+        
+        self.goalslocked = False
         self.xp = 0
 
         layout = BoxLayout(
             orientation="vertical",
             spacing=20,
             padding=60
+        )
+
+        instruction = Label(
+            text="**Minimum requirement to reach the peak is 2*180/6-10 QP**",
+            color=(0.58, 0.29, 0.0, 1),
+            font_size=30,
+            bold=True
         )
 
         title = Label(
@@ -112,7 +123,7 @@ class GoalScreen(Screen):
         )
 
         self.xp_label = Label(
-            text="XP: 0",
+            text="QuestPoints: 0",
             font_size=20,
             size_hint=(1, None),
             height=35
@@ -125,7 +136,7 @@ class GoalScreen(Screen):
             height=70
         )
 
-        add_button = Button(
+        self.add_button = Button(
             text="+ Add Goal",
             size_hint=(0.4, None),
             height=50,
@@ -134,7 +145,7 @@ class GoalScreen(Screen):
             background_color=(0.4, 0.8, 0.4, 1),
         )
 
-        add_button.bind(on_press=lambda x: self.add_goal(goal_input))
+        self.add_button.bind(on_press=lambda x: self.add_goal(goal_input))
 
         scroll = ScrollView()
 
@@ -159,25 +170,45 @@ class GoalScreen(Screen):
             pos_hint={"center_x": 0.5}
         )
 
+        limit_button = Button(
+            text="Lock todays tasks",
+            font_size=24,
+            background_normal="",
+            background_color=(255, 0, 0, 5),
+            color=(1, 1, 1, 1),
+            size_hint=(0.4, None),
+            height=60,
+            pos_hint={
+                "center_x":0.5
+            }
+
+        )
+        limit_button.bind(on_press=self.limit_goals)
         back_button.bind(on_press=self.go_back)
 
+        layout.add_widget(instruction)
         layout.add_widget(title)
         layout.add_widget(self.xp_label)
         layout.add_widget(goal_input)
-        layout.add_widget(add_button)
+        layout.add_widget(self.add_button)
         layout.add_widget(scroll)
+        layout.add_widget(limit_button)
         layout.add_widget(back_button)
-
         self.add_widget(layout)
 
     def add_goal(self, goal_input):
+
+        if self.goalslocked:
+            print("Goals are locked!")
+            return
+
         text = goal_input.text.strip()
 
         if text == "":
             return
 
         goal = Button(
-            text="[   ]       " + text,
+            text="[   ] " + text,
             size_hint_y=None,
             height=50,
             background_normal="",
@@ -192,16 +223,39 @@ class GoalScreen(Screen):
         goal_input.text = ""
 
     def complete_goal(self, goal):
-        if goal.text.startswith("Done"):
+        if goal.text.startswith("[Done]"):
             return
 
-        goal.text = "[Done] " + goal.text[4:]
+        goal.text = "[Done] " + goal.text[5:]
         goal.background_color = (0.7, 1, 0.7, 1)
+
         self.xp += 10
-        self.xp_label.text = f"XP {self.xp}"
+        self.xp_label.text = f"XP: {self.xp}"
+
+        goal.unbind(on_press=goal.on_press)
 
     def go_back(self, button):
         self.manager.current = "home"
+
+    def limit_goals(self, button):
+        self.goals_locked = True
+
+
+
+
+        # Disable the Add Goal button
+        self.add_button.disabled = True
+
+        # Disable the Lock button
+        button.disabled = True
+        button.text = "Goals Locked"
+
+        subprocess.Popen(
+            [sys.executable, "main.py", str(self.xp)]
+        )
+        #main.climbing(self.xp)
+                  #print("Today's goals have been locked!")
+
 
 
 # ---------- APP ----------
